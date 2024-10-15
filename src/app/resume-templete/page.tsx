@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Github, Linkedin, Mail, Phone, Download } from 'lucide-react'
 import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 type ResumeData = {
   name: string
@@ -75,82 +76,18 @@ export default function ResumeTemplate() {
   }, [])
 
   const downloadPDF = () => {
-    const doc = new jsPDF({
-      format: 'letter',
-      unit: 'pt'
-    })
-
-    if (!resumeData) return
-
-    doc.setFont('helvetica')
-
-    
-    const margin = 40
-    let yOffset = margin
-
-    
-    doc.setFontSize(24)
-    doc.text(resumeData.name, margin, yOffset)
-    yOffset += 30
-
- 
-    doc.setFontSize(10)
-    const contactInfo = [
-      resumeData.email && `Email: ${resumeData.email}`,
-      resumeData.phone && `Phone: ${resumeData.phone}`,
-      resumeData.github && `GitHub: ${resumeData.github}`,
-      resumeData.linkedin && `LinkedIn: ${resumeData.linkedin}`
-    ].filter(Boolean).join(' | ')
-    doc.text(contactInfo, margin, yOffset)
-    yOffset += 20
-
-   
-    const addSection = (title: string, content: () => void) => {
-      doc.setFontSize(14)
-      doc.text(title, margin, yOffset)
-      yOffset += 15
-      doc.line(margin, yOffset, 572 - margin, yOffset)
-      yOffset += 15
-      doc.setFontSize(10)
-      content()
-      yOffset += 10
+    const resumeElement: HTMLElement | null = document.querySelector('.resume-content')  
+    if (resumeElement) {
+      html2canvas(resumeElement, { scale: 2 }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/png')
+        const pdf = new jsPDF('p', 'mm', 'a4')
+        const imgProps = pdf.getImageProperties(imgData)
+        const pdfWidth = pdf.internal.pageSize.getWidth()
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+        pdf.save('resume.pdf')
+      })
     }
-
-    
-    addSection('Education', () => {
-      resumeData.education.forEach((edu) => {
-        doc.text(`${edu.degree}, ${edu.institution}, ${edu.year}`, margin, yOffset)
-        yOffset += 15
-      })
-    })
-
-  
-    addSection('Skills', () => {
-      const skillsText = resumeData.skills.join(', ')
-      const splitSkills = doc.splitTextToSize(skillsText, 572 - 2 * margin)
-      doc.text(splitSkills, margin, yOffset)
-      yOffset += splitSkills.length * 12
-    })
-
- 
-    addSection('Experience', () => {
-      resumeData.experience.forEach((exp) => {
-        doc.setFont('helvetica', 'bold')
-        doc.text(`${exp.position} - ${exp.company}`, margin, yOffset)
-        yOffset += 15
-        doc.setFont('helvetica', 'normal')
-        doc.text(exp.duration, margin, yOffset)
-        yOffset += 15
-        exp.bullets.forEach((bullet) => {
-          const bulletText = doc.splitTextToSize(`• ${bullet}`, 572 - 2 * margin - 10)
-          doc.text(bulletText, margin + 10, yOffset)
-          yOffset += bulletText.length * 12
-        })
-        yOffset += 5
-      })
-    })
-
-    doc.save('resume.pdf')
   }
 
   if (!resumeData) {
@@ -159,83 +96,86 @@ export default function ResumeTemplate() {
 
   return (
     <div className="container mx-auto p-4">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center">{resumeData.name}</CardTitle>
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground mt-2">
-            {resumeData.email && (
-              <div className="flex items-center">
-                <Mail className="h-4 w-4 mr-1" />
-                {resumeData.email}
-              </div>
-            )}
-            {resumeData.phone && (
-              <div className="flex items-center">
-                <Phone className="h-4 w-4 mr-1" />
-                {resumeData.phone}
-              </div>
-            )}
-            {resumeData.github && (
-
-              <div className="flex items-center">
-                <Github className="h-4 w-4 mr-1" />
-                {resumeData.github}
-              </div>
-            )}
-            {resumeData.linkedin && (
-              <div className="flex items-center">
-                <Linkedin className="h-4 w-4 mr-1" />
-                {resumeData.linkedin}
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {resumeData.education && resumeData.education.length > 0 && (
-            <section>
-              <h2 className="text-xl font-semibold mb-2">Education</h2>
-              <Separator className="mb-2" />
-              <ul className="list-disc pl-5 space-y-1">
-                {resumeData.education.map((edu, index) => (
-                  <li key={index}>{`${edu.degree}, ${edu.institution}, ${edu.year}`}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {resumeData.skills && resumeData.skills.length > 0 && (
-            <section>
-              <h2 className="text-xl font-semibold mb-2">Skills</h2>
-              <Separator className="mb-2" />
-              <ul className="list-disc pl-5 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
-                {resumeData.skills.map((skill, index) => (
-                  <li key={index}>{skill}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {resumeData.experience && resumeData.experience.length > 0 && (
-            <section>
-              <h2 className="text-xl font-semibold mb-2">Experience</h2>
-              <Separator className="mb-2" />
-              {resumeData.experience.map((exp, index) => (
-                <div key={index} className="mb-4">
-                  <h3 className="font-semibold text-lg">{exp.position}</h3>
-                  <p className="text-sm text-muted-foreground">{exp.company} | {exp.duration}</p>
-                  {exp.bullets && exp.bullets.length > 0 && (
-                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                      {exp.bullets.map((bullet, bulletIndex) => (
-                        <li key={bulletIndex} className="text-sm">{bullet}</li>
-                      ))}
-                    </ul>
-                  )}
+      <div className="resume-content"> 
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-3xl font-bold text-center">{resumeData.name}</CardTitle>
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground mt-2">
+              {resumeData.email && (
+                <div className="flex items-center">
+                  <Mail className="h-4 w-4 mr-1" />
+                  {resumeData.email}
                 </div>
-              ))}
-            </section>
-          )}
-        </CardContent>
-      </Card>
+              )}
+              {resumeData.phone && (
+                <div className="flex items-center">
+                  <Phone className="h-4 w-4 mr-1" />
+                  {resumeData.phone}
+                </div>
+              )}
+              {resumeData.github && (
+                <div className="flex items-center">
+                  <Github className="h-4 w-4 mr-1" />
+                  {resumeData.github}
+                </div>
+              )}
+              {resumeData.linkedin && (
+                <div className="flex items-center">
+                  <Linkedin className="h-4 w-4 mr-1" />
+                  {resumeData.linkedin}
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {resumeData.education && resumeData.education.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-2">Education</h2>
+                <Separator className="mb-2" />
+                <ul className="list-disc pl-5 space-y-1">
+                  {resumeData.education.map((edu, index) => (
+                    <li key={index}>{`${edu.degree}, ${edu.institution}, ${edu.year}`}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {resumeData.skills && resumeData.skills.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-2">Skills</h2>
+                <Separator className="mb-2" />
+                <ul className="list-disc pl-5 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+                  {resumeData.skills.map((skill, index) => (
+                    <li key={index}>{skill}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {resumeData.experience && resumeData.experience.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-2">Experience</h2>
+                <Separator className="mb-2" />
+                {resumeData.experience.map((exp, index) => (
+                  <div key={index} className="mb-4">
+                    <h3 className="font-semibold text-lg">{exp.position}</h3>
+                    <p className="text-sm text-muted-foreground">{exp.company} | {exp.duration}</p>
+                    {exp.bullets && exp.bullets.length > 0 && (
+                      <ul className="list-disc pl-5 mt-2 space-y-1">
+                        {exp.bullets.map((bullet, bulletIndex) => (
+                          <li key={bulletIndex} className="text-sm">{bullet}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </section>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Download Button placed outside of resume content */}
       <div className="flex justify-center mt-4">
         <Button onClick={downloadPDF}>
           <Download className="mr-2 h-4 w-4" /> Download PDF

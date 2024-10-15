@@ -60,8 +60,9 @@ export default function ResumeBuilder() {
   })
 
   const onSubmit = (data: ResumeData) => {
-    localStorage.setItem('resumeData', JSON.stringify(data));  // Save to localStorage
-    router.push('/resume-template');  // Navigate to the page
+    localStorage.setItem('resumeData', JSON.stringify(data));  
+    
+    router.push('/resume-template');  
   };
 
   return (
